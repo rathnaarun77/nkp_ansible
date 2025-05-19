@@ -1,5 +1,21 @@
 ---
 # tasks file for nkp_deploy
+- name: Extract MACHINE_TEMPLATE_IMAGE from NODE_IMAGE_URL
+  set_fact:
+    MACHINE_TEMPLATE_IMAGE: "{{ NODE_IMAGE_URL | regex_search('/([^/]+\\.qcow2)', '\\1') }}"
+
+- name: debug template name
+  debug:
+    var: MACHINE_TEMPLATE_IMAGE
+
+- name: Extract NKP_VERSION from URL
+  set_fact:
+    NKP_VERSION: "{{ NKP_LINUX_URL | regex_search('nkp/v(\\d+\\.\\d+\\.\\d+)/', '\\1') }}"
+
+- name: Show extracted version
+  debug:
+    msg: "Extracted NKP_VERSION is {{ NKP_VERSION }}"
+
 - name: Check if NKP rock image is present
   nutanix.ncp.ntnx_images_info:
     nutanix_host: "{{ NUTANIX_ENDPOINT }}"
@@ -7,7 +23,7 @@
     nutanix_password: "{{ NUTANIX_PASSWORD }}"
     validate_certs: false
     filter:
-      name: "{{ NUTANIX_MACHINE_TEMPLATE_IMAGE_NAME }}"
+      name: "{{ MACHINE_TEMPLATE_IMAGE }}"
   register: image_result
 
 
@@ -23,10 +39,10 @@
     nutanix_username: "{{ NUTANIX_USER }}"
     nutanix_password: "{{ NUTANIX_PASSWORD }}"
     validate_certs: false
-    source_uri: "{{ image_url }}"
+    source_uri: "{{ NODE_IMAGE_URL }}"
     clusters:
       - name: "{{ NUTANIX_PRISM_ELEMENT_CLUSTER_NAME }}"
-    name: "{{ NUTANIX_MACHINE_TEMPLATE_IMAGE_NAME }}"
+    name: "{{ MACHINE_TEMPLATE_IMAGE }}"
     desc: "Image uploaded for NKP deploy by Ansible"
     image_type: "DISK_IMAGE"
     wait: true
@@ -70,7 +86,7 @@
       - type: "DISK"
         size_gb: 20
         clone_image:
-          name: "{{ NUTANIX_MACHINE_TEMPLATE_IMAGE_NAME }}"
+          name: "{{ MACHINE_TEMPLATE_IMAGE }}"
         bus: "SCSI"
     vcpus: 4
     cores_per_vcpu: 1
@@ -114,7 +130,7 @@
   loop: "{{ groups['nkp_boot'] }}"
 
 - name: Download and extract NKP binary
-  ansible.builtin.shell: "curl -fsSL '{{ nkp_url }}' | tar xz -C /usr/local/bin -- nkp"
+  ansible.builtin.shell: "curl -fsSL '{{ NKP_LINUX_URL }}' | tar xz -C /usr/local/bin -- nkp"
   become: true
   delegate_to: "{{ item }}"
   loop: "{{ groups['nkp_boot'] }}"
@@ -127,32 +143,77 @@
   delegate_to: "{{ item }}"
   loop: "{{ groups['nkp_boot'] }}"
 
+- name: Extract URL without http or https
+  set_fact:
+    clean_mirror_registry_url: "{{ MIRROR_REGISTRY_URL | regex_replace('^https?://', '') }}"
 
-- name: Create NKP cluster
+- name: Launch NKP cluster create (for unauthenticated registries)
   ansible.builtin.shell: |
     export NUTANIX_USER={{ NUTANIX_USER }}
     export NUTANIX_PASSWORD={{ NUTANIX_PASSWORD }}
     nkp create cluster nutanix -c {{ CLUSTER_NAME }} \
+      --kind-cluster-image {{ clean_mirror_registry_url }}/mesosphere/konvoy-bootstrap:v{{ NKP_VERSION }}\
       --endpoint https://{{ NUTANIX_ENDPOINT }}:{{ NUTANIX_PORT }} \
       --insecure \
       --kubernetes-service-load-balancer-ip-range {{ LB_IP_RANGE }} \
       --control-plane-endpoint-ip {{ CONTROL_PLANE_ENDPOINT_IP }} \
-      --control-plane-vm-image {{ NUTANIX_MACHINE_TEMPLATE_IMAGE_NAME }} \
+      --control-plane-vm-image {{ MACHINE_TEMPLATE_IMAGE }} \
       --control-plane-prism-element-cluster {{ NUTANIX_PRISM_ELEMENT_CLUSTER_NAME }} \
       --control-plane-subnets {{ NUTANIX_SUBNET_NAME }} \
-      --control-plane-replicas 3 \
-      --worker-vm-image {{ NUTANIX_MACHINE_TEMPLATE_IMAGE_NAME }} \
+      --control-plane-replicas {{ CP_REPLICAS }} \
+      --worker-vm-image {{ MACHINE_TEMPLATE_IMAGE }} \
       --worker-prism-element-cluster {{ NUTANIX_PRISM_ELEMENT_CLUSTER_NAME }} \
       --worker-subnets {{ NUTANIX_SUBNET_NAME }} \
-      --worker-replicas 3 \
+      --worker-replicas {{ WORKER_REPLICAS }} \
       --csi-storage-container {{ NUTANIX_STORAGE_CONTAINER_NAME }} \
-      --registry-url "https://registry-1.docker.io" \ 
-      --registry-username {{ DOCKER_USERNAME }} \ 
-      --registry-password {{ DOCKER_PASSWORD }} \
+      --registry-mirror-url {{ MIRROR_REGISTRY_URL }} \
+      --control-plane-memory {{ CP_MEMORY }} \
+      --control-plane-vcpus {{ CP_VCPU }} \
+      --worker-memory {{ WORKER_MEMORY }} \
+      --worker-vcpus {{ WORKER_VCPU }} \
       --self-managed
+  async: 3600
+  poll: 10
   register: nkp_output
   delegate_to: "{{ item }}"
   loop: "{{ groups['nkp_boot'] }}"
+  when: (DOCKER_USERNAME | default('') == '') and (DOCKER_PASSWORD | default('') == '')
+
+
+- name: Launch NKP cluster create (for authenticated registries)
+  ansible.builtin.shell: |
+    export NUTANIX_USER={{ NUTANIX_USER }}
+    export NUTANIX_PASSWORD={{ NUTANIX_PASSWORD }}
+    nkp create cluster nutanix -c {{ CLUSTER_NAME }} \
+      --kind-cluster-image {{ clean_mirror_registry_url }}/mesosphere/konvoy-bootstrap:v{{ NKP_VERSION }}\
+      --endpoint https://{{ NUTANIX_ENDPOINT }}:{{ NUTANIX_PORT }} \
+      --insecure \
+      --kubernetes-service-load-balancer-ip-range {{ LB_IP_RANGE }} \
+      --control-plane-endpoint-ip {{ CONTROL_PLANE_ENDPOINT_IP }} \
+      --control-plane-vm-image {{ MACHINE_TEMPLATE_IMAGE }} \
+      --control-plane-prism-element-cluster {{ NUTANIX_PRISM_ELEMENT_CLUSTER_NAME }} \
+      --control-plane-subnets {{ NUTANIX_SUBNET_NAME }} \
+      --control-plane-replicas {{ CP_REPLICAS }} \
+      --worker-vm-image {{ MACHINE_TEMPLATE_IMAGE }} \
+      --worker-prism-element-cluster {{ NUTANIX_PRISM_ELEMENT_CLUSTER_NAME }} \
+      --worker-subnets {{ NUTANIX_SUBNET_NAME }} \
+      --worker-replicas 2 \
+      --csi-storage-container {{ NUTANIX_STORAGE_CONTAINER_NAME }} \
+      --registry-mirror-url {{ MIRROR_REGISTRY_URL }} \
+      --registry-mirror-username {{ DOCKER_USERNAME }} \
+      --registry-mirror-password {{ DOCKER_PASSWORD }} \
+      --control-plane-memory {{ CP_MEMORY }} \
+      --control-plane-vcpus {{ CP_VCPU }} \
+      --worker-memory {{ WORKER_MEMORY }} \
+      --worker-vcpus {{ WORKER_VCPU }} \
+      --self-managed
+  async: 3600
+  poll: 10
+  register: nkp_output
+  delegate_to: "{{ item }}"
+  loop: "{{ groups['nkp_boot'] }}"
+  when: (DOCKER_USERNAME | default('') != '') and (DOCKER_PASSWORD | default('') != '')
+
 
 - name: Display NKP cluster creation output
   debug:
