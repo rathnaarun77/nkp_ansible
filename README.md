@@ -79,6 +79,8 @@ Since we are deploying in a Nutanix environment, install the `nutanix.ncp` ansib
         CP_VCPU: 4  # Control Plane vCPUs
         WORKER_MEMORY: 16  # Worker memory in GB
         WORKER_VCPU: 8  # Worker vCPUs
+        CP_REPLICAS: 3  # Number of control plane replicas
+        WORKER_REPLICAS: 3  # Number of worker replicas
     ```
 
     > ⚠️ **Note:** All the variables are mandatory.
