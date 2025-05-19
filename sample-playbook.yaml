@@ -1,5 +1,5 @@
 ---
-- hosts: all
+- hosts: localhost
   gather_facts: no
   roles:
     - rathnaarun77.nkp_ansible
