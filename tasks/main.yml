@@ -1,20 +1,20 @@
 ---
 # tasks file for nkp_deploy
-- name: Extract MACHINE_TEMPLATE_IMAGE from NODE_IMAGE_URL
+- name: Extract MACHINE_TEMPLATE_IMAGE from NODE_IMAGE_URL and get first match
   set_fact:
-    MACHINE_TEMPLATE_IMAGE: "{{ NODE_IMAGE_URL | regex_search('/([^/]+\\.qcow2)', '\\1') }}"
+    MACHINE_TEMPLATE_IMAGE: "{{ (NODE_IMAGE_URL | regex_search('/([^/]+\\.qcow2)', '\\1'))[0] }}"
 
 - name: debug template name
   debug:
     var: MACHINE_TEMPLATE_IMAGE
 
-- name: Extract NKP_VERSION from URL
+- name: Extract NKP_VERSION from URL and get first match
   set_fact:
-    NKP_VERSION: "{{ NKP_LINUX_URL | regex_search('nkp/v(\\d+\\.\\d+\\.\\d+)/', '\\1') }}"
+    NKP_VERSION: "{{ (NKP_LINUX_URL | regex_search('nkp/v(\\d+\\.\\d+\\.\\d+)/', '\\1'))[0] }}"
 
 - name: Show extracted version
   debug:
-    msg: "Extracted NKP_VERSION is {{ NKP_VERSION }}"
+    var: NKP_VERSION
 
 - name: Check if NKP rock image is present
   nutanix.ncp.ntnx_images_info:

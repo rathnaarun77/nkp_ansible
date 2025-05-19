@@ -59,23 +59,26 @@ Since we are deploying in a Nutanix environment, install the `nutanix.ncp` ansib
       environment:
         ANSIBLE_HOST_KEY_CHECKING: "False"
       vars:
-        image_url: ""  # Download URL for NKP Rocky node OS image
-        SSH_PUBLIC_KEY: ""  # SSH public key of Ansible control node
-        nkp_url: ""  # NKP binary download link for Linux
-        NKP_VERSION: ""  # NKP version to install
-        CLUSTER_NAME: ""  # NKP cluster name
-        NUTANIX_USER: ""  # Prism Central username
-        NUTANIX_PASSWORD: ''  # Keep the password enclosed between single quotes
-        NUTANIX_ENDPOINT: ""  # Prism Central IP address
-        NUTANIX_PORT: "9440"  # Prism Central port
-        LB_IP_RANGE: ""  # Load balancer IP range
-        CONTROL_PLANE_ENDPOINT_IP: ""  # Kubernetes VIP
-        NUTANIX_MACHINE_TEMPLATE_IMAGE_NAME: ""  # NKP Rocky image name
-        NUTANIX_PRISM_ELEMENT_CLUSTER_NAME: ""  # Prism Element cluster name
-        NUTANIX_SUBNET_NAME: ""  # Example: primary
-        NUTANIX_STORAGE_CONTAINER_NAME: ""  # Prism storage container 
-        DOCKER_USERNAME: "" #Enter your docker username
-        DOCKER_PASSWORD: "" #Enter your docker password
+    NODE_IMAGE_URL: ""  # Download URL for NKP Rocky node OS image
+    SSH_PUBLIC_KEY: ""  # SSH public key of Ansible control node
+    NKP_LINUX_URL: ""  # NKP binary download link for Linux
+    CLUSTER_NAME: ""  # NKP cluster name
+    NUTANIX_USER: ""  # Prism Central username
+    NUTANIX_PASSWORD: ''  # Keep the password enclosed between single quotes
+    NUTANIX_ENDPOINT: ""  # Prism Central IP address
+    NUTANIX_PORT: "9440"  # Prism Central port
+    LB_IP_RANGE: ""  # Load balancer IP range
+    CONTROL_PLANE_ENDPOINT_IP: ""  # Kubernetes VIP
+    NUTANIX_PRISM_ELEMENT_CLUSTER_NAME: ""  # Prism Element cluster name
+    NUTANIX_SUBNET_NAME: ""  # Example: primary
+    NUTANIX_STORAGE_CONTAINER_NAME: ""  # Prism storage container 
+    # MIRROR_REGISTRY_URL: ""  # Override Mirror Image registry URL(default is docker.io)
+    DOCKER_USERNAME: "" #Enter your docker username or private registry username(for unauthenticated leave empty)
+    DOCKER_PASSWORD: "" #Enter your docker password or private registry password(for unauthenticated leave empty)
+    CP_MEMORY: 8  # Control Plane memory in GB
+    CP_VCPU: 4  # Control Plane vCPUs
+    WORKER_MEMORY: 16  # Worker memory in GB
+    WORKER_VCPU: 8  # Worker vCPUs
     ```
 
     > ⚠️ **Note:** All the variables are mandatory.

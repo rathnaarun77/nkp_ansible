@@ -7,3 +7,4 @@ WORKER_MEMORY: 16  # Worker memory in GB
 WORKER_VCPU: 8  # Worker vCPUs
 CP_REPLICAS: 3  # Number of control plane replicas
 WORKER_REPLICAS: 3  # Number of worker replicas
+MIRROR_REGISTRY_URL: "https://registry-1.docker.io"
