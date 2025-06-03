@@ -72,7 +72,7 @@ Since we are deploying in a Nutanix environment, install the `nutanix.ncp` ansib
         NUTANIX_PRISM_ELEMENT_CLUSTER_NAME: ""  # Prism Element cluster name
         NUTANIX_SUBNET_NAME: ""  # Example: primary
         NUTANIX_STORAGE_CONTAINER_NAME: ""  # Prism storage container 
-        # MIRROR_REGISTRY_URL: ""  # Override Mirror Image registry URL(default is docker.io)
+        # MIRROR_REGISTRY_URL: ""  # Override Mirror Image registry URL(default is docker.io, use complete url e.g. https://registry1.docker.io)
         DOCKER_USERNAME: "" #Enter your docker username or private registry username(for unauthenticated leave empty)
         DOCKER_PASSWORD: "" #Enter your docker password or private registry password(for unauthenticated leave empty)
         CP_MEMORY: 8  # Control Plane memory in GB
